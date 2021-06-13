@@ -3,23 +3,48 @@
 def LUdecomposition(mat, b):
     """
     :param mat: the coefficients matrix
-    :param b:  the solution vector
+    :param b: the solution vector
     :return: none
     """
-    inversL, L = toUpperTriangularMat(mat)  # calculate the L matrix and the inverse L
-    print("L = ")
-    printMatrix(L)  # print the L matrix
+    inversL, L, counter = toUpperTriangularMat(mat)  # calculate the L matrix and the inverse L
+    print("-----------------------------")
+    string = "L = "
+    for i in range(1, counter):
+        if i < counter - 1:
+            string += "invJ" + str(i) + " * "
+        else:
+            string += "invJ" + str(i)
+    print(string)
+    printMatrix(L, "L")  # print the L matrix
+    print("-----------------------------")
+    string = "inverse L = "
+    for i in range(counter - 1, 0, -1):
+        if i > 1:
+            string += "J" + str(i) + " * "
+        else:
+            string += "J" + str(i)
+    print(string)
+    printMatrix(inversL, "inverse L")
+    print("-----------------------------")
+    print("U = invL * A")
     U = multMat(inversL, mat)  # calculate the U matrix
-    print("U = ")
-    printMatrix(U)  # print the U matrix
-    inversU = FromUpperToInvers(U, createIdentityMatrix(len(U)))  # calculate thr inverse of U
+    inversU, counter = FromUpperToInvers(U, createIdentityMatrix(len(U)))  # calculate thr inverse of U
+    print("-----------------------------")
+    string = "inverse U = "
+    for i in range(counter - 1, 0, -1):
+        string += "E" + str(i) + " * "
+    string += "U"
+    print(string)
+    printMatrix(U, "U")  # print the U matrix
+    print("-----------------------------")
+    print("x = invU * invL * b")
     x = multMat(inversL, b)  # finding the result vector
     x = multMat(inversU, x)  # finding the result vector
-    print("X = ")
-    printMatrix(x)  # print the X matrix
+    printMatrix(x, "x")  # print the X matrix
+    return x
 
 
-def FromUpperToInvers(A, inverseMat):
+def FromUpperToInvers(A, inverseMat, counter=1):
     """
     :param A: upper matrix
     :param inverseMat: the matrix that will become the inverse
@@ -31,13 +56,17 @@ def FromUpperToInvers(A, inverseMat):
             elemntarMat[j][i] = -(A[j][i] / A[i][i])
             A = multMat(elemntarMat, A)
             inverseMat = multMat(elemntarMat, inverseMat)
+            printMatrix(elemntarMat, "E" + str(counter))
+            counter += 1
             elemntarMat[j][i] = 0
         if A[i][i] != 1:  # convert the pivots to one
             elemntarMat[i][i] = 1 / A[i][i]
             A = multMat(elemntarMat, A)
             inverseMat = multMat(elemntarMat, inverseMat)
+            printMatrix(elemntarMat, "E" + str(counter))
+            counter += 1
             elemntarMat[i][i] = 1
-    return inverseMat
+    return inverseMat, counter
 
 
 def toUpperTriangularMat(A):
@@ -47,23 +76,31 @@ def toUpperTriangularMat(A):
     """
     L = createIdentityMatrix(len(A))  # create indetity matrix
     InL = createIdentityMatrix(len(A))  # create indetity matrix
+    counter = 1
     for i in range(len(A)):  # run over the lines
         if A[i][i] == 0:  # if the pivot is 0
             for j in range(i + 1, len(A)):  # run over the columns
                 if A[j][i] != 0:  # if the element under the pivot is not 0
-                    L = multMat((L, linesExchange(A, i, j)))  # make lines exchange and multiply
+                    elementary = linesExchange(A, i, j)
+                    L = multMat(L, elementary)  # make lines exchange and multiply
+                    printMatrix(elementary, "J" + str(counter))
                     InL = multMat((linesExchange(A, i, j)), InL)  # make lines exchange and multiply
+                    printMatrix(identity, "inverse J" + str(counter))
                     A = multMat((linesExchange(A, i, j)), A)
+                    counter += 1
                     break
         if A[i][i] != 0:  # check if B is regular
             for j in range(i + 1, len(A)):  # run over the columns
                 identity = createIdentityMatrix(len(A))
                 identity[j][i] = -(A[j][i] / A[i][i])  # elementary matrix
+                printMatrix(identity, "J" + str(counter))
                 InL = multMat(identity, InL)  # L^(-1)
                 A = multMat(identity, A)
                 identity[j][i] *= -1  # changing the element in order to find L
+                printMatrix(identity, "inverse J" + str(counter))
                 L = multMat(L, identity)
-    return InL, L
+                counter += 1
+    return InL, L, counter
 
 
 def linesExchange(A, line1, line2):
@@ -126,7 +163,7 @@ def iterativGuassSeidel(A, b, epsilon, flagD):
     :param b: the result vector
     :param epsilon: the mistake
     :param flagD: tell us if the system have dominant diagonal
-    :return: None
+    :return: vector x if found
     """
     print("** Iterative Guass Seidel **")
     flagC = False  # flagC = false if the linear equations does not converge
@@ -155,6 +192,7 @@ def iterativGuassSeidel(A, b, epsilon, flagD):
         print("The final result is: x = ")
         printMatrix(x)
         print("The number of the iteration is : " + str(_ + 1))
+        return x
     else:
         print("The system of linear equations does not converge :(")
 
@@ -162,12 +200,14 @@ def iterativGuassSeidel(A, b, epsilon, flagD):
 # ############### 2nd method ############### #
 
 
-def printMatrix(a):
+def printMatrix(a, name=None):
     """
     :param a: a matrix to print
     :return: prints in matrix format
     """
     print("-----------------------------")
+    if name is not None:
+        print(name + " = ")
     for i in range(len(a)):
         if i is len(a) - 1:
             print(" " + str(a[i]) + "]")
@@ -175,8 +215,7 @@ def printMatrix(a):
             print("[" + str(a[i]))
         else:
             print(" " + str(a[i]))
-    print("-----------------------------")
-
+    print("")
 
 def newMat(numRow, numCol):
     """
@@ -307,6 +346,56 @@ def rowSum(line):
 
 # end dominant part
 
+
+def checkDifferPart3(l, d, name1, name2, epsilon):
+    print("check the difference between the methods:")
+    flag = True
+    for i in range(len(l)):
+        print("x" + str(i + 1) + " - " + name1 + ": " + str(l[i][0]) + "\nx" +
+              str(i + 1) + " - " + name2 + ": " + str(d[i][0]))
+        if abs(l[i][0] - d[i][0]) > epsilon:
+            flag = False
+            print("The difference is bigger than epsilon for some of the components\n")
+            return
+    print("The difference is smaller than epsilon for all the components\n")
+
+
+def calcFinalResult(result, epsilon, day, hour, minutes):
+    """
+    :param result: the result
+    :param epsilon: the epsilon we decided on for the question
+    :param day: the day of the calculation in str
+    :param hour: the hour of the calculation in str
+    :param minutes: the minutes of the calculation in str
+    :return: the result by the requested format
+    """
+    stringRes = str(result)  # cast the result to string
+    i = 0
+    while stringRes[i] is not ".":  # run over the string while we get to the point
+        i += 1  # count how many digits there is before the point
+    i += 1
+    count = 1
+    while epsilon < 1:  # checking how digit needs after the point
+        epsilon *= 10
+        count += 1
+    stringRes = stringRes[:i + count] + "00000" + day + hour + minutes
+    return stringRes
+
+
+def calcFinalResultVector(vector, name, epsilon, day, hour, minutes):
+    """
+    :param vector: vector x
+    :param epsilon: allowed error
+    :param day: dd
+    :param hour: hh
+    :param minutes: mm
+    :return: prints the formatted result vector x
+    """
+    for i in range(len(vector)):
+        vector[i][0] = calcFinalResult(vector[i][0], epsilon, day, hour, minutes)
+    printMatrix(vector, name + " - Final Result in Format")
+
+
 # ############## main ###############
 def driver():
     """
@@ -324,7 +413,8 @@ def driver():
     epsilon = 10 ** (-4)
 
     flagDom = dominantDiagonal(A)  # check if there is a dominant diagonal
-
+    name1 = "LUdecomposition"
+    name2 = "iterativGuassSeidel"
     # check
     if flagDom is False:
         copyA = copyMat(A)
@@ -336,8 +426,11 @@ def driver():
             flagDom = True
 
         # end check
-    LUdecomposition(A, b)
-    iterativGuassSeidel(A, b, epsilon, flagDom)
+    x1 = LUdecomposition(A, b)
+    x2 = iterativGuassSeidel(A, b, epsilon, flagDom)
+    checkDifferPart3(x1, x2, name1, name2, epsilon)
+    calcFinalResultVector(x1, name1, epsilon, "14", "00", "55")
+    calcFinalResultVector(x2, name2, epsilon, "14", "00", "56")
 
 
 driver()
